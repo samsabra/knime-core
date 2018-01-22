@@ -377,19 +377,19 @@
         <filter id="336695337">
             <message_arguments>
                 <message_argument value="org.knime.core.node.wizard.AbstractWizardNodeView"/>
-                <message_argument value="retrieveCurrentValueFromView()"/>
+                <message_argument value="pushRequestUpdate(String)"/>
+            </message_arguments>
+        </filter>
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.core.node.wizard.AbstractWizardNodeView"/>
+                <message_argument value="respondToViewRequest(String)"/>
             </message_arguments>
         </filter>
         <filter id="336695337">
             <message_arguments>
                 <message_argument value="org.knime.core.node.wizard.AbstractWizardNodeView"/>
                 <message_argument value="showApplyOptionsDialog(boolean, String, String)"/>
-            </message_arguments>
-        </filter>
-        <filter id="336695337">
-            <message_arguments>
-                <message_argument value="org.knime.core.node.wizard.AbstractWizardNodeView"/>
-                <message_argument value="showValidationErrorInView(String)"/>
             </message_arguments>
         </filter>
         <filter id="336695337">
@@ -408,26 +408,6 @@
             <message_arguments>
                 <message_argument value="org.knime.core.node.wizard.AbstractWizardNodeView"/>
                 <message_argument value="AbstractWizardNodeView(T)"/>
-            </message_arguments>
-        </filter>
-        <filter id="437350426">
-            <message_arguments>
-                <message_argument value="org.knime.core.node.wizard.AbstractWizardNodeView"/>
-                <message_argument value="T"/>
-                <message_argument value="org.knime.core.node.wizard.WizardNode"/>
-            </message_arguments>
-        </filter>
-        <filter id="438399040">
-            <message_arguments>
-                <message_argument value="org.knime.core.node.wizard.AbstractWizardNodeView"/>
-                <message_argument value="T"/>
-                <message_argument value="org.knime.core.node.wizard.WizardNode"/>
-            </message_arguments>
-        </filter>
-        <filter id="439378009">
-            <message_arguments>
-                <message_argument value="org.knime.core.node.wizard.AbstractWizardNodeView"/>
-                <message_argument value="T"/>
             </message_arguments>
         </filter>
     </resource>
