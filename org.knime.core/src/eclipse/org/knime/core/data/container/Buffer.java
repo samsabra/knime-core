@@ -1418,13 +1418,29 @@ public class Buffer implements KNIMEStreamConstants {
         return new String(c);
     }
 
-    /**
+     /**
      * Get a new <code>RowIterator</code>, traversing all rows that have been added. Calling this method makes only
      * sense when the buffer has been closed. However, no check is done (as it is available to package classes only).
      *
      * @return a new Iterator over all rows.
      */
     synchronized CloseableRowIterator iterator() {
+        return internalIterator(null);
+    }
+
+    /**
+     * Get a new <code>RowIterator</code> over selected columns, traversing all rows that have been added. Calling this
+     * method makes only sense when the buffer has been closed. However, no check is done (as it is available to package
+     * classes only).
+     *
+     * @param indices the indices of columns over which to iterate
+     * @return a new Iterator over all rows.
+     */
+    synchronized CloseableRowIterator iterator(final int... indices) {
+        return internalIterator(indices);
+    }
+
+    private CloseableRowIterator internalIterator(final int[] indices) {
         if (usesOutFile()) {
             if (m_useBackIntoMemoryIterator) {
                 // the order of the following lines is very important!
@@ -1438,7 +1454,8 @@ public class Buffer implements KNIMEStreamConstants {
                 LOGGER.debug("Opening input stream on file \"" + m_binFile.getAbsolutePath() + "\", "
                         + m_nrOpenInputStreams + " open streams");
 
-                TableStoreCloseableRowIterator iterator = m_outputReader.iterator();
+                TableStoreCloseableRowIterator iterator =
+                        indices == null ? m_outputReader.iterator() : m_outputReader.iterator(indices);
                 iterator.setBuffer(this);
                 m_nrOpenInputStreams.incrementAndGet();
                 synchronized (m_openIteratorSet) {

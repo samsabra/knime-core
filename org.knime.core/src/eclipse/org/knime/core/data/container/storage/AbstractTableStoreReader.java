@@ -132,7 +132,24 @@ public abstract class AbstractTableStoreReader implements KNIMEStreamConstants {
         return m_fileStoreHandlerRepository;
     }
 
+    /**
+     * Returns a row iterator which returns each row one-by-one from the table.
+     *
+     * @return row iterator
+     * @throws IOException
+     */
     public abstract TableStoreCloseableRowIterator iterator() throws IOException;
+
+    /**
+     * Returns a row iterator over selected columns of each row from the table.
+     *
+     * @param indices the indices of columns over which to iterate
+     * @return row iterator over selected columns
+     * @throws IOException any type of I/O problem
+     */
+    public TableStoreCloseableRowIterator iterator(final int... indices) throws IOException {
+        return iterator();
+    }
 
     /**
      * Reads meta information, such as the classes of serialized {@link DataCell} instances.

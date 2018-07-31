@@ -129,6 +129,15 @@ public final class ContainerTable implements DataTable, KnowsRowCountTable {
 
     /**
      * {@inheritDoc}
+     */
+    @Override
+    public CloseableRowIterator iterator(final int... indices) {
+        ensureBufferOpen();
+        return m_buffer.iterator(indices);
+    }
+
+    /**
+     * {@inheritDoc}
      * @deprecated use {@link #size()} instead which supports more than {@link Integer#MAX_VALUE} rows
      */
     @Override
