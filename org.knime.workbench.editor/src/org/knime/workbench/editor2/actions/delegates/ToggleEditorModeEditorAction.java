@@ -40,57 +40,28 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ---------------------------------------------------------------------
+ * -------------------------------------------------------------------
  *
  * History
- *   20.02.2008 (Fabian Dill): created
+ *   29.06.2012 (Peter Ohl): created
  */
-package org.knime.workbench.editor2.editparts;
+package org.knime.workbench.editor2.actions.delegates;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.eclipse.draw2d.IFigure;
-import org.eclipse.draw2d.geometry.Rectangle;
-import org.knime.core.node.workflow.NodeUIInformation;
-import org.knime.core.ui.node.workflow.NodePortUI;
-import org.knime.core.ui.node.workflow.WorkflowManagerUI;
-import org.knime.workbench.editor2.figures.WorkflowOutPortBarFigure;
-import org.knime.workbench.editor2.model.WorkflowPortBar;
+import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.actions.AbstractNodeAction;
+import org.knime.workbench.editor2.actions.ToggleEditorModeAction;
 
 /**
+ * Editor action for toggling the edit mode of the current editor between Annotation Edit and Node Edit.
  *
- * @author Fabian Dill, University of Konstanz
+ * @author loki der quaeler
  */
-public class WorkflowOutPortBarEditPart extends AbstractWorkflowPortBarEditPart {
-    /**
-     *
-     * {@inheritDoc}
-     */
-    @Override
-    protected List<NodePortUI> getModelChildren() {
-        final WorkflowManagerUI manager = ((WorkflowPortBar)getModel()).getWorkflowManager();
-        final List<NodePortUI> ports = new ArrayList<NodePortUI>();
-        for (int i = 0; i < manager.getNrWorkflowOutgoingPorts(); i++) {
-            ports.add(manager.getOutPort(i));
-        }
-        return ports;
-    }
-
+public class ToggleEditorModeEditorAction extends AbstractEditorAction {
     /**
      * {@inheritDoc}
      */
     @Override
-    protected IFigure createFigure() {
-        final NodeUIInformation uiInfo = ((WorkflowPortBar)getModel()).getUIInfo();
-
-        if (uiInfo != null) {
-            final int[] bounds = uiInfo.getBounds();
-            final Rectangle newBounds = new Rectangle(bounds[0], bounds[1], bounds[2], bounds[3]);
-
-            return new WorkflowOutPortBarFigure(newBounds);
-        } else {
-            return new WorkflowOutPortBarFigure(getMinMaxXcoordInWorkflow()[1] /* pass the max x coord */);
-        }
+    protected AbstractNodeAction createAction(final WorkflowEditor editor) {
+        return new ToggleEditorModeAction(editor);
     }
 }

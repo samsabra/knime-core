@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -43,54 +44,24 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   20.02.2008 (Fabian Dill): created
+ *   Jul 24, 2018 (loki): created
  */
-package org.knime.workbench.editor2.editparts;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import org.eclipse.draw2d.IFigure;
-import org.eclipse.draw2d.geometry.Rectangle;
-import org.knime.core.node.workflow.NodeUIInformation;
-import org.knime.core.ui.node.workflow.NodePortUI;
-import org.knime.core.ui.node.workflow.WorkflowManagerUI;
-import org.knime.workbench.editor2.figures.WorkflowOutPortBarFigure;
-import org.knime.workbench.editor2.model.WorkflowPortBar;
+package org.knime.workbench.editor2;
 
 /**
+ * This interface defines method which EditPart subclasses which wish to hear about editor mode changes (presumably
+ * because they have Figure subclasses which render and behave differently depending upon which editor mode is current)
+ * should implement.
  *
- * @author Fabian Dill, University of Konstanz
+ * @author loki der quaeler
  */
-public class WorkflowOutPortBarEditPart extends AbstractWorkflowPortBarEditPart {
+public interface EditorModeParticipant {
+
     /**
+     * Implementors will have this invoked after the WorkflowEditor has had its internal state updated.
      *
-     * {@inheritDoc}
+     * @param newMode the now-current mode of the workflow editor
      */
-    @Override
-    protected List<NodePortUI> getModelChildren() {
-        final WorkflowManagerUI manager = ((WorkflowPortBar)getModel()).getWorkflowManager();
-        final List<NodePortUI> ports = new ArrayList<NodePortUI>();
-        for (int i = 0; i < manager.getNrWorkflowOutgoingPorts(); i++) {
-            ports.add(manager.getOutPort(i));
-        }
-        return ports;
-    }
+    void workflowEditorModeWasSet(WorkflowEditorMode newMode);
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected IFigure createFigure() {
-        final NodeUIInformation uiInfo = ((WorkflowPortBar)getModel()).getUIInfo();
-
-        if (uiInfo != null) {
-            final int[] bounds = uiInfo.getBounds();
-            final Rectangle newBounds = new Rectangle(bounds[0], bounds[1], bounds[2], bounds[3]);
-
-            return new WorkflowOutPortBarFigure(newBounds);
-        } else {
-            return new WorkflowOutPortBarFigure(getMinMaxXcoordInWorkflow()[1] /* pass the max x coord */);
-        }
-    }
 }

@@ -79,6 +79,9 @@ import org.knime.core.node.workflow.NodeUIInformationListener;
 import org.knime.core.node.workflow.WorkflowAnnotation;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.workbench.editor2.EditorModeParticipant;
+import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.WorkflowEditorMode;
 import org.knime.workbench.editor2.WorkflowMarqueeSelectionTool;
 import org.knime.workbench.editor2.WorkflowSelectionDragEditPartsTracker;
 import org.knime.workbench.editor2.WorkflowSelectionTool;
@@ -91,11 +94,15 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
+ * TODO The color utility methods in this class should be moved out into their own utilities class.
+ *
+ * TODO This architecture is an acid trip. This class creates figures of B, and is subclassed by X; X creates figures of
+ * A which is a superclass of B. A's newContent(...) method knows about salient facets of B... trippy - not good trippy.
  *
  * @author ohl, KNIME AG, Zurich, Switzerland
  */
-public class AnnotationEditPart extends AbstractWorkflowEditPart implements
-        NodeUIInformationListener, IPropertyChangeListener {
+public class AnnotationEditPart extends AbstractWorkflowEditPart
+    implements EditorModeParticipant, IPropertyChangeListener, NodeUIInformationListener {
 
     private static final Color DEFAULT_FG = ColorConstants.black;
 
@@ -236,6 +243,30 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart implements
     }
 
     /**
+     * Changes the color to its CIE 1931 linear luminance grayscale representation; it also does some nudging on
+     * already monochromatic colors, nudging the value towards the center (so if it's black - go to dark gray; if
+     * it's white, go to light gray)
+     *
+     * TODO compare / constract to AbstractPortFigure.lightenColor(Color)
+     *
+     * @param c a presumed non-gray color.
+     * @return the grayscale representation of the passed value.
+     */
+    public static Color convertToGrayscale(final Color c) {
+        if ((c.getRed() == c.getGreen()) && (c.getGreen() == c.getBlue())) {
+            final int delta = 12 * ((c.getRed() > 127) ? -2 : 7);
+            final int yInt = c.getRed() + delta;
+
+            return new Color(null, yInt, yInt, yInt);
+        } else {
+            final double y = (0.2126 * c.getRed()) + (0.7152 * c.getGreen()) + (0.0722 * c.getBlue());
+            final int yInt = (int)y;
+
+            return new Color(null, yInt, yInt, yInt);
+        }
+    }
+
+    /**
      * If no font is set, this one should be used for workflow annotations.
      *
      * @return the default font for workflow annotation
@@ -255,37 +286,39 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart implements
         return FontStore.INSTANCE.getDefaultFont(size);
     }
 
-
     /**
-    * If no font is set, this one should be used for node annotations.
-    * page for node labels.
-    *
-    * @return the default font for node annotation
-    */
-   public static Font getNodeAnnotationDefaultFont() {
-       Font defFont = FontStore.INSTANCE.getDefaultFont(FontStore.getFontSizeFromKNIMEPrefPage());
-       return defFont;
-   }
+     * If no font is set, this one should be used for node annotations. page for node labels.
+     *
+     * @return the default font for node annotation
+     */
+    public static Font getNodeAnnotationDefaultFont() {
+        Font defFont = FontStore.INSTANCE.getDefaultFont(FontStore.getFontSizeFromKNIMEPrefPage());
+        return defFont;
+    }
 
     private AnnotationEditManager m_directEditManager;
+
+    private WorkflowEditorMode m_currentEditorMode = WorkflowEditor.INITIAL_EDITOR_MODE;
 
     /** {@inheritDoc} */
     @Override
     public Annotation getModel() {
         return (Annotation)super.getModel();
     }
+
     /**
      * {@inheritDoc}
+     *
+     * Subclasses should make sure to set the instance variable <code>m_figure</code>.
      */
     @Override
     protected IFigure createFigure() {
-        Annotation anno = getModel();
-        NodeAnnotationFigure f = new WorkflowAnnotationFigure(anno);
+        final Annotation anno = getModel();
+        final WorkflowAnnotationFigure annotationFigure = new WorkflowAnnotationFigure(anno);
         if (anno instanceof WorkflowAnnotation) {
-            f.setBounds(new Rectangle(anno.getX(), anno.getY(), anno.getWidth(),
-                    anno.getHeight()));
+            annotationFigure.setBounds(new Rectangle(anno.getX(), anno.getY(), anno.getWidth(), anno.getHeight()));
         }
-        return f;
+        return annotationFigure;
     }
 
     /**
@@ -294,12 +327,13 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart implements
     @Override
     public void activate() {
         super.activate();
-        IPreferenceStore store =
-            KNIMEUIPlugin.getDefault().getPreferenceStore();
+
+        final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
         store.addPropertyChangeListener(this);
 
-        Annotation anno = getModel();
+        final Annotation anno = getModel();
         anno.addUIInformationListener(this);
+
         // update the ui info now
         nodeUIInformationChanged(null);
     }
@@ -309,11 +343,12 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart implements
      */
     @Override
     public void deactivate() {
-        IPreferenceStore store =
-            KNIMEUIPlugin.getDefault().getPreferenceStore();
+        final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
         store.removePropertyChangeListener(this);
-        Annotation anno = getModel();
+
+        final Annotation anno = getModel();
         anno.removeUIInformationListener(this);
+
         super.deactivate();
     }
 
@@ -337,8 +372,8 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart implements
         NodeAnnotationFigure annoFig = (NodeAnnotationFigure)getFigure();
         annoFig.newContent(anno);
         WorkflowRootEditPart parent = (WorkflowRootEditPart)getParent();
-        parent.setLayoutConstraint(this, getFigure(), new Rectangle(
-                anno.getX(), anno.getY(), anno.getWidth(), anno.getHeight()));
+        parent.setLayoutConstraint(this, getFigure(),
+            new Rectangle(anno.getX(), anno.getY(), anno.getWidth(), anno.getHeight()));
         refreshVisuals();
         parent.refresh();
     }
@@ -379,18 +414,22 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart implements
     }
 
     /**
-     * @param t
-     * @return */
+     * @param t an Annotation
+     * @return true if t is an instance of NodeAnnotation and <code>isDefault()</code> returns true.
+     */
     public static boolean isDefaultNodeAnnotation(final Annotation t) {
         return t instanceof NodeAnnotation
         && (((NodeAnnotation)t).getData()).isDefault();
     }
 
-    public static StyleRange[] toSWTStyleRanges(final AnnotationData t,
-            final Font defaultFont) {
+    /**
+     * @param t annotation data to be converted to style ranges
+     * @param defaultFont the default font for text
+     * @return an array of StyleRange instances
+     */
+    public static StyleRange[] toSWTStyleRanges(final AnnotationData t, final Font defaultFont) {
         AnnotationData.StyleRange[] knimeStyleRanges = t.getStyleRanges();
-        ArrayList<StyleRange> swtStyleRange =
-                new ArrayList<StyleRange>(knimeStyleRanges.length);
+        ArrayList<StyleRange> swtStyleRange = new ArrayList<StyleRange>(knimeStyleRanges.length);
         for (AnnotationData.StyleRange knimeSR : knimeStyleRanges) {
             StyleRange swtStyle = new StyleRange();
             Font f = FontStore.INSTANCE.getAnnotationFont(knimeSR, defaultFont);
@@ -410,7 +449,7 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart implements
     /**
      *
      * @param s the component with the styled text to convert.
-     * @return
+     * @return an instance of AnnotationData embodying the styled text.
      */
     public static AnnotationData toAnnotationData(final StyledText s) {
         AnnotationData result = new AnnotationData();
@@ -529,12 +568,14 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart implements
      */
     @Override
     public void showTargetFeedback(final Request request) {
-        if (getSelected() == SELECTED_NONE && request.getType().equals(REQ_SELECTION)) {
-            IFigure f = getFigure();
+        if (WorkflowEditorMode.ANNOTATION_EDIT.equals(m_currentEditorMode) && (getSelected() == SELECTED_NONE)
+            && request.getType().equals(REQ_SELECTION)) {
+            final IFigure f = getFigure();
             if (f instanceof WorkflowAnnotationFigure) {
                 ((WorkflowAnnotationFigure)f).showEditIcon(true);
             }
         }
+
         super.showTargetFeedback(request);
     }
 
@@ -543,12 +584,13 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart implements
      */
     @Override
     public void eraseTargetFeedback(final Request request) {
-        if (request.getType().equals(REQ_SELECTION)) {
-            IFigure f = getFigure();
+        if (WorkflowEditorMode.ANNOTATION_EDIT.equals(m_currentEditorMode) && request.getType().equals(REQ_SELECTION)) {
+            final IFigure f = getFigure();
             if (f instanceof WorkflowAnnotationFigure) {
                 ((WorkflowAnnotationFigure)f).showEditIcon(false);
             }
         }
+
         super.eraseTargetFeedback(request);
     }
 
@@ -559,11 +601,18 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart implements
      */
     @Override
     public DragTracker getDragTracker(final Request request) {
-        Object object = request.getExtendedData().get(WorkflowSelectionTool.DRAG_START_LOCATION);
-        IFigure f = getFigure();
-        if (object instanceof Point && f instanceof WorkflowAnnotationFigure && getSelected() == SELECTED_NONE) {
+        if (!WorkflowEditorMode.ANNOTATION_EDIT.equals(m_currentEditorMode)) {
+            return null;
+        }
+
+        final Object object = request.getExtendedData().get(WorkflowSelectionTool.DRAG_START_LOCATION);
+        final IFigure f = getFigure();
+        if ((object instanceof Point) && (f instanceof WorkflowAnnotationFigure) && (getSelected() == SELECTED_NONE)) {
+            // TODO this seems a little dodgy - what's going on by invoking a getter and not doing anything with
+            //      its return?
             PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor().getEditorSite();
-            Rectangle iconBounds = ((WorkflowAnnotationFigure)f).getEditIconBounds().getCopy();
+
+            final Rectangle iconBounds = ((WorkflowAnnotationFigure)f).getEditIconBounds().getCopy();
             if (!iconBounds.contains((Point)object)) {
                 return new WorkflowMarqueeSelectionTool();
             }
@@ -572,4 +621,27 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart implements
         return new WorkflowSelectionDragEditPartsTracker(this);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * We don't want to be selected if we're not in annotation-edit-mode.
+     */
+    @Override
+    public EditPart getTargetEditPart(final Request request) {
+        if (m_currentEditorMode.equals(WorkflowEditorMode.ANNOTATION_EDIT) ) {
+            return super.getTargetEditPart(request);
+        }
+
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void workflowEditorModeWasSet(final WorkflowEditorMode newMode) {
+        m_currentEditorMode = newMode;
+
+        ((NodeAnnotationFigure)getFigure()).workflowEditorModeWasSet(newMode);
+    }
 }

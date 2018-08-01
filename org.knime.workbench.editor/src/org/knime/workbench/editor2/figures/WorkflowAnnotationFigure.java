@@ -87,19 +87,36 @@ public class WorkflowAnnotationFigure extends NodeAnnotationFigure {
         return m_editIcon.getBounds();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void newContent(final Annotation annotation) {
         super.newContent(annotation);
 
-        AnnotationData data = annotation.getData();
+        final boolean renderEnabled = determineRenderEnabledState(annotation);
+        final AnnotationData data = annotation.getData();
 
         Color bg = AnnotationEditPart.RGBintToColor(data.getBgColor());
+        if (!renderEnabled) {
+            bg = AnnotationEditPart.convertToGrayscale(bg);
+        }
         setBackgroundColor(bg);
         m_page.setBackgroundColor(bg);
+
+        Color fg = AnnotationEditPart.getAnnotationDefaultForegroundColor();
+        if (!renderEnabled) {
+            fg = AnnotationEditPart.convertToGrayscale(fg);
+        }
+        setForegroundColor(fg);
+        m_page.setForegroundColor(fg);
 
         // set border with specified annotation color
         if (data.getBorderSize() > 0) {
             Color col = AnnotationEditPart.RGBintToColor(data.getBorderColor());
+            if (!renderEnabled) {
+                col = AnnotationEditPart.convertToGrayscale(col);
+            }
             m_page.setBorder(new LineBorder(col, data.getBorderSize()));
         } else {
             m_page.setBorder(null);

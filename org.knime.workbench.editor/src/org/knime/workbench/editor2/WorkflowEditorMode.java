@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -43,54 +44,27 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   20.02.2008 (Fabian Dill): created
+ *   Jul 21, 2018 (loki): created
  */
-package org.knime.workbench.editor2.editparts;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import org.eclipse.draw2d.IFigure;
-import org.eclipse.draw2d.geometry.Rectangle;
-import org.knime.core.node.workflow.NodeUIInformation;
-import org.knime.core.ui.node.workflow.NodePortUI;
-import org.knime.core.ui.node.workflow.WorkflowManagerUI;
-import org.knime.workbench.editor2.figures.WorkflowOutPortBarFigure;
-import org.knime.workbench.editor2.model.WorkflowPortBar;
+package org.knime.workbench.editor2;
 
 /**
+ * With AP-8593 as its genesis, this enumeration captures whether we are in annotation edit mode or node edit mode; this
+ * state expression is implemented as an enumeration for future-proofing.
  *
- * @author Fabian Dill, University of Konstanz
+ * @author loki der quaeler
  */
-public class WorkflowOutPortBarEditPart extends AbstractWorkflowPortBarEditPart {
-    /**
-     *
-     * {@inheritDoc}
-     */
-    @Override
-    protected List<NodePortUI> getModelChildren() {
-        final WorkflowManagerUI manager = ((WorkflowPortBar)getModel()).getWorkflowManager();
-        final List<NodePortUI> ports = new ArrayList<NodePortUI>();
-        for (int i = 0; i < manager.getNrWorkflowOutgoingPorts(); i++) {
-            ports.add(manager.getOutPort(i));
-        }
-        return ports;
-    }
+public enum WorkflowEditorMode {
 
     /**
-     * {@inheritDoc}
+     * That annotations and their textual contents are allowed to be edited, and that annotations, their textual content
+     * and their node content are allowed to be moved as an atomic unit (but not nodes and their connections.)
      */
-    @Override
-    protected IFigure createFigure() {
-        final NodeUIInformation uiInfo = ((WorkflowPortBar)getModel()).getUIInfo();
+    ANNOTATION_EDIT,
 
-        if (uiInfo != null) {
-            final int[] bounds = uiInfo.getBounds();
-            final Rectangle newBounds = new Rectangle(bounds[0], bounds[1], bounds[2], bounds[3]);
+    /**
+     * That nodes and their connections are allowed to be edited and moved (but not annotations.)
+     */
+    NODE_EDIT;
 
-            return new WorkflowOutPortBarFigure(newBounds);
-        } else {
-            return new WorkflowOutPortBarFigure(getMinMaxXcoordInWorkflow()[1] /* pass the max x coord */);
-        }
-    }
 }

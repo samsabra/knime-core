@@ -54,6 +54,7 @@ import java.util.List;
 import org.eclipse.draw2d.ConnectionAnchor;
 import org.eclipse.gef.ConnectionEditPart;
 import org.eclipse.gef.DragTracker;
+import org.eclipse.gef.EditPart;
 import org.eclipse.gef.EditPolicy;
 import org.eclipse.gef.NodeEditPart;
 import org.eclipse.gef.Request;
@@ -62,6 +63,7 @@ import org.eclipse.gef.editparts.ZoomListener;
 import org.eclipse.gef.editparts.ZoomManager;
 import org.eclipse.gef.requests.SelectionRequest;
 import org.eclipse.gef.tools.ConnectionDragCreationTool;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.workflow.ConnectionContainer;
@@ -75,6 +77,9 @@ import org.knime.core.ui.node.workflow.NodeInPortUI;
 import org.knime.core.ui.node.workflow.NodeOutPortUI;
 import org.knime.core.ui.node.workflow.NodePortUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
+import org.knime.workbench.editor2.EditorModeParticipant;
+import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.WorkflowEditorMode;
 import org.knime.workbench.editor2.editparts.anchor.InPortConnectionAnchor;
 import org.knime.workbench.editor2.editparts.anchor.OutPortConnectionAnchor;
 import org.knime.workbench.editor2.editparts.policy.PortGraphicalRoleEditPolicy;
@@ -93,13 +98,7 @@ import org.knime.workbench.editor2.model.WorkflowPortBar;
  * @author Fabian Dill, University of Konstanz
  */
 public abstract class AbstractPortEditPart extends AbstractGraphicalEditPart
-        implements NodeEditPart, WorkflowListener, ZoomListener {
-
-    private int m_index;
-
-    private final PortType m_type;
-
-    private final boolean m_isInPort;
+        implements EditorModeParticipant, NodeEditPart, WorkflowListener, ZoomListener {
 
     /**
      * Instead of using the Collections.EMPTY_LIST we have our own typed empty list if no connections are available.
@@ -109,6 +108,16 @@ public abstract class AbstractPortEditPart extends AbstractGraphicalEditPart
      */
     protected static final List<ConnectionContainerUI> EMPTY_LIST = Collections.unmodifiableList(new LinkedList<>());
 
+
+    private int m_index;
+
+    private final PortType m_type;
+
+    private final boolean m_isInPort;
+
+    /** The editor mode state as last set via the EditorModeParticipant method **/
+    protected WorkflowEditorMode m_currentEditorMode = WorkflowEditor.INITIAL_EDITOR_MODE;
+
     /**
      * Subclasses must call this with the appropriate port type, port index and
      * a flag whether it is an in or out port.
@@ -117,13 +126,15 @@ public abstract class AbstractPortEditPart extends AbstractGraphicalEditPart
      * @param type the port type
      * @param inPort true if it is an inport, false otherwise
      */
-    public AbstractPortEditPart(final PortType type, final int portIndex,
-            final boolean inPort) {
+    public AbstractPortEditPart(final PortType type, final int portIndex, final boolean inPort) {
         m_index = portIndex;
         m_type = type;
         m_isInPort = inPort;
     }
 
+    /**
+     * This updates its underlying figure with the number of ports it should represent.
+     */
     public void updateNumberOfPorts() {
         if (isInPort()) {
             ((AbstractPortFigure)getFigure()).setNumberOfPorts(getNodeContainer().getNrInPorts());
@@ -400,8 +411,7 @@ public abstract class AbstractPortEditPart extends AbstractGraphicalEditPart
      * {@inheritDoc}
      */
     @Override
-    public ConnectionAnchor getTargetConnectionAnchor(
-            final ConnectionEditPart connection) {
+    public ConnectionAnchor getTargetConnectionAnchor(final ConnectionEditPart connection) {
         return new InPortConnectionAnchor(getFigure());
     }
 
@@ -411,6 +421,20 @@ public abstract class AbstractPortEditPart extends AbstractGraphicalEditPart
     @Override
     public ConnectionAnchor getTargetConnectionAnchor(final Request request) {
         return new InPortConnectionAnchor(getFigure());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * We don't want to be selected if we're not in node-edit-mode.
+     */
+    @Override
+    public EditPart getTargetEditPart(final Request request) {
+        if (m_currentEditorMode.equals(WorkflowEditorMode.NODE_EDIT) ) {
+            return super.getTargetEditPart(request);
+        }
+
+        return null;
     }
 
     /**
@@ -459,4 +483,18 @@ public abstract class AbstractPortEditPart extends AbstractGraphicalEditPart
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void workflowEditorModeWasSet(final WorkflowEditorMode newMode) {
+        m_currentEditorMode = newMode;
+
+        final AbstractPortFigure portFigure = (AbstractPortFigure)getFigure();
+        final Color fgColor = WorkflowEditorMode.NODE_EDIT.equals(newMode) ? portFigure.getBackgroundColor()
+            : AnnotationEditPart.convertToGrayscale(portFigure.getBackgroundColor());
+
+        portFigure.setBackgroundColor(fgColor);
+        portFigure.repaint();
+    }
 }
