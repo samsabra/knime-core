@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,61 +41,72 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ------------------------------------------------------------------------
+ * ---------------------------------------------------------------------
+ *
+ * History
+ *   2 Aug 2018 (Marc Bux, KNIME AG, Zurich, Switzerland): created
  */
 package org.knime.core.data;
 
+import java.io.IOException;
+
 /**
- * Most general data interface in table structure with a fixed number of columns
- * and iterable rows (no random access).
+ * Implementation of an unmaterialized cell that has not been read and therefore cannot be accessed or worked with.
  *
- * <p>
- * Each <code>DataTable</code> is a read-only container of {@link DataRow}
- * elements which are returned by the {@link RowIterator}. Each row must have
- * the same number of {@link DataCell} elements (columns), is read-only, and
- * must provide a unique row identifier. A table also contains a
- * {@link DataTableSpec} member which provides information about the structure
- * of the table. The {@link DataTableSpec} consists of {@link DataColumnSpec}s
- * which contain information about the column, e.g. name, type, and possible
- * values etc.
- *
- * @author Thomas Gabriel, University of Konstanz
- *
- * @see DataCell
- * @see DataRow
- * @see RowIterator
+ * @author Marc Bux, KNIME AG, Zurich, Switzerland
+ * @since 3.6 // TODO bump to 3.7
  */
-public interface DataTable extends Iterable<DataRow> {
+@SuppressWarnings("serial")
+public final class UnmaterializedCell extends DataCell {
+    static final UnmaterializedCell INSTANCE = new UnmaterializedCell();
 
     /**
-     * Returns the {@link DataTableSpec} object of this table which gives
-     * information about the structure of this data table.
-     *
-     * @return the DataTableSpec of this table
+     * Long term, we might introduce some kind of lazy loading of unmaterialized cells. For now, we simply throw an
+     * exception when an unmaterialized cell is accessed in any way.
      */
-    DataTableSpec getDataTableSpec();
+    static final String ACCESS_EXCEPTION = "Data cell is not materialized and cannot be accessed.";
 
     /**
-     * Returns a row iterator which returns each row one-by-one from the table.
-     *
-     * @return row iterator
-     *
-     * @see org.knime.core.data.DataRow
+     * {@inheritDoc}
      */
     @Override
-    RowIterator iterator();
-
-    /**
-     * Returns a row iterator over selected columns of each row from the table.
-     *
-     * @param indices the indices of columns over which to iterate
-     * @return row iterator over selected columns
-     *
-     * @see org.knime.core.data.DataRow
-     * @since 3.6 // TODO bump to 3.7
-     */
-    default RowIterator iterator(final int... indices) {
-        return iterator();
+    public String toString() {
+        throw new UnsupportedOperationException(ACCESS_EXCEPTION);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected boolean equalsDataCell(final DataCell dc) {
+        throw new UnsupportedOperationException(ACCESS_EXCEPTION);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int hashCode() {
+        throw new UnsupportedOperationException(ACCESS_EXCEPTION);
+    }
+
+    /**
+     * Factory for (de-)serializing an unmaterialized cell.
+     *
+     * @noreference This class is not intended to be referenced by clients.
+     */
+    public static final class UnmaterializedSerializer implements DataCellSerializer<UnmaterializedCell> {
+        /** {@inheritDoc} */
+        @Override
+        public void serialize(final UnmaterializedCell cell, final DataCellDataOutput output) throws IOException {
+            throw new UnsupportedOperationException(ACCESS_EXCEPTION);
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public UnmaterializedCell deserialize(final DataCellDataInput input) throws IOException {
+            return INSTANCE;
+        }
+
+    }
 }

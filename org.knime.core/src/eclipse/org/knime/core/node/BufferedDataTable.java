@@ -333,7 +333,7 @@ public final class BufferedDataTable implements DataTable, PortObject {
 
     /**
      * {@inheritDoc}
-     * @since 3.6
+     * @since 3.6 // TODO bump to 3.7
      */
     @Override
     public CloseableRowIterator iterator(final int... indices) {
@@ -905,7 +905,7 @@ public final class BufferedDataTable implements DataTable, PortObject {
 
         /**
          * {@inheritDoc}
-         * @since 3.6
+         * @since 3.6 // TODO bump to 3.7
          */
         @Override
         default CloseableRowIterator iterator(final int... indices) {

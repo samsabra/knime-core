@@ -394,6 +394,17 @@ public final class DataType {
     }
 
     /**
+     * A cell representing a {@link org.knime.core.data.DataCell} that has not
+     * been read and therefore cannot be accessed or worked with.
+     *
+     * @return singleton of an unmaterialized cell
+     * @since 3.6 // TODO bump to 3.7
+     */
+    public static DataCell getUnmaterializedCell() {
+        return UnmaterializedCell.INSTANCE;
+    }
+
+    /**
      * Internal access method to determine the preferred
      * {@link org.knime.core.data.DataValue} class to a given
      * {@link org.knime.core.data.DataCell} implementation. This method tries
