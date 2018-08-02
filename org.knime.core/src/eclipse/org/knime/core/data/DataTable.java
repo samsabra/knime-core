@@ -45,14 +45,18 @@
 package org.knime.core.data;
 
 /**
- * Most general data interface in table structure with a fixed number of columns and iterable rows (no random access).
+ * Most general data interface in table structure with a fixed number of columns
+ * and iterable rows (no random access).
  *
  * <p>
- * Each <code>DataTable</code> is a read-only container of {@link DataRow} elements which are returned by the
- * {@link RowIterator}. Each row must have the same number of {@link DataCell} elements (columns), is read-only, and
- * must provide a unique row identifier. A table also contains a {@link DataTableSpec} member which provides information
- * about the structure of the table. The {@link DataTableSpec} consists of {@link DataColumnSpec}s which contain
- * information about the column, e.g. name, type, and possible values etc.
+ * Each <code>DataTable</code> is a read-only container of {@link DataRow}
+ * elements which are returned by the {@link RowIterator}. Each row must have
+ * the same number of {@link DataCell} elements (columns), is read-only, and
+ * must provide a unique row identifier. A table also contains a
+ * {@link DataTableSpec} member which provides information about the structure
+ * of the table. The {@link DataTableSpec} consists of {@link DataColumnSpec}s
+ * which contain information about the column, e.g. name, type, and possible
+ * values etc.
  *
  * @author Thomas Gabriel, University of Konstanz
  *
@@ -63,8 +67,8 @@ package org.knime.core.data;
 public interface DataTable extends Iterable<DataRow> {
 
     /**
-     * Returns the {@link DataTableSpec} object of this table which gives information about the structure of this data
-     * table.
+     * Returns the {@link DataTableSpec} object of this table which gives
+     * information about the structure of this data table.
      *
      * @return the DataTableSpec of this table
      */
@@ -81,10 +85,11 @@ public interface DataTable extends Iterable<DataRow> {
     RowIterator iterator();
 
     /**
-     * Returns a row iterator over selected columns of each row from the table. Accessing {@link DataCell}s with indices
-     * other than the specified indices will lead to an {@link UnsupportedOperationException} being thrown. Duplicates,
-     * values smaller than 0, or values larger than the width of the table amongst the specified indices will be
-     * ignored.
+     * Returns a row iterator over selected columns of each row from the table.
+     * Accessing {@link DataCell}s with indices other than the specified
+     * indices will lead to an {@link UnsupportedOperationException} being
+     * thrown. Duplicates, values smaller than 0, or values larger than the
+     * width of the table amongst the specified indices will be ignored.
      *
      * @param indices the indices of columns over which to iterate
      * @return row iterator over selected columns
