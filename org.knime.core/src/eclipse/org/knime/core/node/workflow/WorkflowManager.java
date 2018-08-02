@@ -273,6 +273,7 @@ public final class WorkflowManager extends NodeContainer
      * TODO: better using hash maps here? */
     private final Vector<WorkflowAnnotation> m_annotations = new Vector<WorkflowAnnotation>();
     private final Vector<WorkflowAnnotationID> m_annotationIDs = new Vector<WorkflowAnnotationID>();
+    private int m_nextAnnotationID = 0;
 
     // Misc members:
 
@@ -5730,7 +5731,7 @@ public final class WorkflowManager extends NodeContainer
             // get info about destination
             int destPortIndex = conn.getDestPort();
             int portIndex = conn.getSourcePort();
-            if (conn.getSource() != this.getID()) {
+            if (!conn.getSource().equals(this.getID())) {
                 // connected to another node inside this WFM
                 assert conn.getType() == ConnectionType.STD;
                 result[destPortIndex] = m_workflow.getNode(conn.getSource()).getOutPort(portIndex);
@@ -9060,7 +9061,7 @@ public final class WorkflowManager extends NodeContainer
         if (m_annotations.contains(annotation)) {
             throw new IllegalArgumentException("Annotation \"" + annotation + "\" already exists");
         }
-        WorkflowAnnotationID waID = new WorkflowAnnotationID(getID(), m_annotations.size());
+        WorkflowAnnotationID waID = new WorkflowAnnotationID(getID(), m_nextAnnotationID++);
         annotation.setID(waID);
         m_annotations.add(annotation);
         m_annotationIDs.add(waID);
