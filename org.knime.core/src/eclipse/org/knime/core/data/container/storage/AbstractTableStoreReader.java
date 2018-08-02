@@ -141,7 +141,10 @@ public abstract class AbstractTableStoreReader implements KNIMEStreamConstants {
     public abstract TableStoreCloseableRowIterator iterator() throws IOException;
 
     /**
-     * Returns a row iterator over selected columns of each row from the table.
+     * Returns a row iterator over selected columns of each row from the table. Accessing {@link DataCell}s with indices
+     * other than the specified indices will lead to an {@link UnsupportedOperationException} being thrown. Duplicates,
+     * values smaller than 0, or values larger than the width of the table amongst the specified indices will be
+     * ignored.
      *
      * @param indices the indices of columns over which to iterate
      * @return row iterator over selected columns
@@ -207,8 +210,7 @@ public abstract class AbstractTableStoreReader implements KNIMEStreamConstants {
 
             DataType elementType = null;
             if (single.containsKey(TableStoreFormat.CFG_CELL_SINGLE_ELEMENT_TYPE)) {
-                NodeSettingsRO subTypeConfig =
-                    single.getNodeSettings(TableStoreFormat.CFG_CELL_SINGLE_ELEMENT_TYPE);
+                NodeSettingsRO subTypeConfig = single.getNodeSettings(TableStoreFormat.CFG_CELL_SINGLE_ELEMENT_TYPE);
                 elementType = DataType.load(subTypeConfig);
             }
             try {
