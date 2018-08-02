@@ -67,12 +67,20 @@ public final class UnmaterializedCell extends DataCell {
      */
     static final String ACCESS_EXCEPTION = "Data cell is not materialized and cannot be accessed.";
 
+    private UnmaterializedCell() {
+    }
+
     /**
      * {@inheritDoc}
      */
     @Override
     public String toString() {
-        throw new UnsupportedOperationException(ACCESS_EXCEPTION);
+        /**
+         * While this behavior is identical to that of missing cells, a question mark still seems most appropriate to
+         * represent unmaterialized cells. We should not throw an exception here, since it will make debugging
+         * difficult.
+         */
+        return "?";
     }
 
     /**
@@ -88,7 +96,7 @@ public final class UnmaterializedCell extends DataCell {
      */
     @Override
     public int hashCode() {
-        throw new UnsupportedOperationException(ACCESS_EXCEPTION);
+        return System.identityHashCode(this);
     }
 
     /**
