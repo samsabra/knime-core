@@ -46,70 +46,66 @@
  * History
  *   2 Aug 2018 (Marc Bux, KNIME AG, Zurich, Switzerland): created
  */
-package org.knime.core.data;
+package org.knime.core.data.container;
 
-import java.io.IOException;
+import org.knime.core.data.DataCell;
+import org.knime.core.data.DataRow;
+import org.knime.core.data.RowKey;
+import org.knime.core.data.UnmaterializedCell;
 
 /**
- * Implementation of an unmaterialized cell that has not been read and therefore cannot be accessed or worked with.
  *
  * @author Marc Bux, KNIME AG, Zurich, Switzerland
  * @since 3.6 // TODO bump to 3.7
  */
-@SuppressWarnings("serial")
-public final class UnmaterializedCell extends DataCell {
+public class PartlyMaterializedBlobSupportRow extends BlobSupportDataRow {
 
-    static final UnmaterializedCell INSTANCE = new UnmaterializedCell();
-
-    /**
-     * Long term, we might introduce some kind of lazy loading of unmaterialized cells. For now, we simply throw an
-     * exception when an unmaterialized cell is accessed in any way.
-     */
     static final String ACCESS_EXCEPTION = "Data cell is not materialized and cannot be accessed.";
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String toString() {
-        throw new UnsupportedOperationException(ACCESS_EXCEPTION);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected boolean equalsDataCell(final DataCell dc) {
-        throw new UnsupportedOperationException(ACCESS_EXCEPTION);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public int hashCode() {
-        throw new UnsupportedOperationException(ACCESS_EXCEPTION);
-    }
-
-    /**
-     * Factory for (de-)serializing an unmaterialized cell.
+     * Initializes a new partly materialized data row with support for blob cells. The new data row has a {@link RowKey}
+     * and an array of {@link DataCell}s. The content of the argument array is copied.
      *
-     * @noreference This class is not intended to be referenced by clients.
+     * @param key a row key containing a row id
+     * @param cells an array containing the actual data of this row
      */
-    public static final class UnmaterializedSerializer implements DataCellSerializer<UnmaterializedCell> {
+    public PartlyMaterializedBlobSupportRow(final RowKey key, final DataCell[] cells) {
+        super(key, cells);
+    }
 
-        /** {@inheritDoc} */
-        @Override
-        public void serialize(final UnmaterializedCell cell, final DataCellDataOutput output) throws IOException {
+    /**
+     * Initializes a new partly materialized data row with support for blob cells. The new data row has a new
+     * {@link RowKey} and an array of {@link DataCell}s. The {@link DataCell}s of the argument data row is copied.
+     *
+     * @param key a row key containing a row id
+     * @param oldRow container of the cells for the new row
+     */
+    public PartlyMaterializedBlobSupportRow(final RowKey key, final DataRow oldRow) {
+        super(key, oldRow);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public DataCell getCell(final int index) {
+        DataCell cell = super.getCell(index);
+        if (cell instanceof UnmaterializedCell) {
             throw new UnsupportedOperationException(ACCESS_EXCEPTION);
         }
+        return cell;
+    }
 
-        /** {@inheritDoc} */
-        @Override
-        public UnmaterializedCell deserialize(final DataCellDataInput input) throws IOException {
-            return INSTANCE;
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public DataCell getRawCell(final int index) {
+        DataCell cell = super.getRawCell(index);
+        if (cell instanceof UnmaterializedCell) {
+            throw new UnsupportedOperationException(ACCESS_EXCEPTION);
         }
-
+        return cell;
     }
 
 }
