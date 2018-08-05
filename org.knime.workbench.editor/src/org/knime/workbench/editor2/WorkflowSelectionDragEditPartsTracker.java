@@ -47,31 +47,50 @@
  */
 package org.knime.workbench.editor2;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
+import org.eclipse.draw2d.IFigure;
+import org.eclipse.draw2d.geometry.Rectangle;
 import org.eclipse.gef.EditPart;
 import org.eclipse.gef.Request;
 import org.eclipse.gef.commands.Command;
 import org.eclipse.gef.commands.CompoundCommand;
 import org.eclipse.gef.commands.UnexecutableCommand;
+import org.eclipse.gef.editparts.AbstractGraphicalEditPart;
+import org.eclipse.gef.tools.AbstractTool;
 import org.eclipse.gef.tools.DragEditPartsTracker;
+import org.eclipse.gef.ui.parts.ScrollingGraphicalViewer;
+import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.SWT;
+import org.eclipse.ui.PlatformUI;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.workbench.editor2.editparts.AbstractPortEditPart;
 import org.knime.workbench.editor2.editparts.AbstractWorkflowPortBarEditPart;
+import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
- * Adjusts the default <code>DragEditPartsTracker</code> to create commands
- * that also move bendpoints.
+ * Adjusts the default <code>DragEditPartsTracker</code> to create commands that also move bendpoints.
  *
  * @author Christoph Sieb, University of Konstanz
  */
 public class WorkflowSelectionDragEditPartsTracker extends DragEditPartsTracker {
+
+    private static final List<EditPart> EMPTY_EDIT_PARTS = Collections.unmodifiableList(new ArrayList<>());
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowSelectionDragEditPartsTracker.class);
+
+
+    private Set<EditPart> m_temporarilyAddedChildrenParts;
 
     /**
      * Constructs a new WorkflowSelectionDragEditPartsTracker with the given
@@ -83,15 +102,136 @@ public class WorkflowSelectionDragEditPartsTracker extends DragEditPartsTracker 
         super(sourceEditPart);
     }
 
-    /**
+    /*
+     * This is a utility method candidate - potentially also something we would cram into WorkflowEditor
+     */
+    @SuppressWarnings("unchecked")
+    private static List<EditPart> getEditPartsContainedOrIntersectingBounds(final WorkflowEditor we,
+        final Rectangle bounds) {
+        if ((bounds == null) || (bounds.width() <= 0) || (bounds.height() < 0)) {
+            return EMPTY_EDIT_PARTS;
+        }
+
+        final ArrayList<EditPart> editParts = new ArrayList<>();
+        final ScrollingGraphicalViewer provider = (ScrollingGraphicalViewer)we.getEditorSite().getSelectionProvider();
+
+        if (provider == null) {
+            return EMPTY_EDIT_PARTS;
+        }
+
+        final EditPart editorPart = (EditPart)provider.getRootEditPart().getChildren().get(0);
+        final List<EditPart> children = editorPart.getChildren();
+
+        children.stream().forEach((ep) -> {
+            if (ep instanceof AbstractGraphicalEditPart) {
+                final IFigure f = ((AbstractGraphicalEditPart)ep).getFigure();
+                final Rectangle figureBounds = f.getBounds();
+
+                if (bounds.contains(figureBounds)
+                    || (bounds.intersects(figureBounds) && (!figureBounds.contains(bounds)))) {
+                    editParts.add(ep);
+                }
+            }
+        });
+
+        return editParts;
+    }
+
+    /*
+     * once getOperationSet() is called, its value is cached in a private scoped variable; we need to null it out so we
+     * can call gOS again to recache - without calling deactivate and activate which produces unwanted side-effects
+     */
+    private void resetCachedOperationSet() {
+        try {
+            final Field f = AbstractTool.class.getDeclaredField("operationSet");
+
+            f.setAccessible(true);
+
+            f.set(this, null);
+          } catch (Exception e) {
+            LOGGER.warn("Unable to null out the operationSet cached value.", e);
+          }
+
+    }
+
+    @SuppressWarnings("unchecked") // generic casting
+    @Override
+    protected boolean handleButtonUp(final int button) {
+        LOGGER.info("HBU: " + this);
+        final boolean result = super.handleButtonUp(button);
+
+        if (m_temporarilyAddedChildrenParts != null) {
+            final HashSet<EditPart> selected = new HashSet<>(getOperationSet());
+
+            selected.removeAll(m_temporarilyAddedChildrenParts);
+
+            final StructuredSelection selectionSet = new StructuredSelection(new ArrayList<>(selected));
+            getCurrentViewer().setSelection(selectionSet);
+
+            resetCachedOperationSet();
+            getOperationSet();
+
+            m_temporarilyAddedChildrenParts = null;
+        }
+
+        return result;
+    }
+
+    /*
      * {@inheritDoc}
      */
+    @SuppressWarnings("unchecked")  // generic casting
     @Override
     protected boolean handleButtonDown(final int button) {
         // don't do any state changes if this is the pan button
         if (button != WorkflowSelectionTool.PAN_BUTTON) {
+            final WorkflowEditor we =
+                (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
+
+            if (we.getEditorMode().equals(WorkflowEditorMode.ANNOTATION_EDIT)) {
+                final HashSet<EditPart> selected = new HashSet<>(getOperationSet());
+                // TODO there are avenues of optimization here - for example build M many maximal bounding rectangles
+                //          from the N original bounding rectangles (where M <= N)
+                m_temporarilyAddedChildrenParts = new HashSet<>();
+
+                // This is the case of the direct selection of an annotation (as opposed to marquee selection)
+                if (selected.size() == 0) {
+                    selected.add(getSourceEditPart());
+                }
+
+                selected.stream().forEach((ep) -> {
+                    if (ep instanceof AnnotationEditPart) {
+                        final Rectangle bounds = ((AnnotationEditPart)ep).getFigure().getBounds();
+                        final List<EditPart> adds = getEditPartsContainedOrIntersectingBounds(we, bounds);
+
+                        adds.stream().forEach((add) -> {
+                            if (!selected.contains(add)) {
+                                m_temporarilyAddedChildrenParts.add(add);
+                            }
+                        });
+                    }
+                });
+
+                final ArrayList<EditPart> newSelection = new ArrayList<>(selected);
+                newSelection.addAll(m_temporarilyAddedChildrenParts);
+
+                final StructuredSelection selectionSet = new StructuredSelection(newSelection);
+                getCurrentViewer().setSelection(selectionSet);
+
+                resetCachedOperationSet();
+                getOperationSet();
+
+                // are we in annotation edit mode? for any of the selected annotations, find
+                //      bounded children (annotations and nodes) - add them to the selection
+                //      until performDrag is over - then remove them -- watch out for duplicates not
+                //      to remove (e.g an annotation has a spatially-child-like annotation which was
+                //      also in the original marquee selection, so though found in the children bound
+                //      search, should not be removed.
+            }
+
             return super.handleButtonDown(button);
         }
+
         return true;
     }
 
@@ -113,15 +253,6 @@ public class WorkflowSelectionDragEditPartsTracker extends DragEditPartsTracker 
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected Request createTargetRequest() {
-        // TODO Auto-generated method stub
-        return super.createTargetRequest();
-    }
-
-    /**
      * Asks each edit part in the
      * {@link org.eclipse.gef.tools.AbstractTool#getOperationSet() operation set}
      * to contribute to a {@link CompoundCommand} after first setting the
@@ -134,13 +265,14 @@ public class WorkflowSelectionDragEditPartsTracker extends DragEditPartsTracker 
      *
      * {@inheritDoc}
      */
+    @SuppressWarnings("unchecked")  // generic casting
     @Override
     protected Command getCommand() {
 
         CompoundCommand command = new CompoundCommand();
         command.setDebugLabel("Drag Object Tracker");
 
-        Iterator iter = getOperationSet().iterator();
+        Iterator<?> iter = getOperationSet().iterator();
 
         Request request = getTargetRequest();
 
